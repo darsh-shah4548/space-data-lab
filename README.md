@@ -64,6 +64,72 @@ By understanding *how* they absorb and reflect energy, we can infer surface prop
 
 **Key insight:** Vegetation follows a predictable seasonal cycle — dormant in winter, green-up in spring, peak in summer, senescence in fall. This pattern is the foundation for crop monitoring, drought detection, and climate studies.
 
+### Notebook 04: Cloud Masking
+**Dealing with the biggest challenge in optical remote sensing**
+
+- Used Sentinel-2's Scene Classification Layer (SCL) to identify clouds
+- Applied masks to remove cloudy pixels from analysis
+- Learned that ~67% of Earth is covered by clouds at any given time
+
+**Key insight:** Quality satellite analysis requires filtering out clouds, shadows, and other atmospheric interference. The SCL band classifies each pixel into categories (vegetation, water, cloud, shadow, etc.).
+
+### Notebook 05: Spectral Indices Beyond NDVI
+**Expanding the toolkit**
+
+- **NDWI** (Normalized Difference Water Index): Detects water bodies
+- **NDBI** (Normalized Difference Built-up Index): Highlights urban areas
+- **NBR** (Normalized Burn Ratio): Assesses fire damage
+
+**Key insight:** The formula pattern `(Band_A - Band_B) / (Band_A + Band_B)` can be adapted to detect almost anything — just choose bands where your target reflects differently than its surroundings.
+
+### Notebook 06: Wildfire Burn Severity (Palisades Fire)
+**From "it looks burned" to "exactly how burned"**
+
+- Analyzed the January 2025 Palisades Fire in Los Angeles
+- Computed NBR before and after the fire
+- Created dNBR (differenced NBR) to quantify burn severity
+- Classified damage into actionable categories (unburned → high severity)
+
+**Key insight:** True color shows "burned or not burned." Spectral indices reveal a *gradient* of severity — critical for emergency response, erosion control, and recovery planning.
+
+### Notebook 07: Flood Detection (Brazil 2024)
+**Mapping inundated areas with NDWI**
+
+- Analyzed the May 2024 floods in Rio Grande do Sul, Brazil
+- Used NDWI to distinguish water from land
+- Compared normal conditions vs flood conditions
+- Classified water extent changes
+
+**Key insight:** Water strongly absorbs NIR while reflecting green light. NDWI exploits this to map water bodies and detect flooding, even when floodwater is muddy.
+
+### Notebook 08: Drought Analysis (California)
+**Detecting vegetation stress across years**
+
+- Compared California's Central Valley: 2019 (normal) vs 2021 (drought)
+- Same location, same season, different water years
+- Classified vegetation stress levels from satellite data
+
+**Key insight:** Drought isn't just "less rain" — it shows up as reduced NDVI across entire regions. Satellites can detect agricultural stress before it's visible on the ground.
+
+### Notebook 09: Urban Expansion (NDBI)
+**Watching cities grow**
+
+- Used NDBI to map built-up areas in Ahmedabad, India
+- Compared 2016 vs 2024 to see urban expansion
+- Classified land into urban/non-urban categories
+
+**Key insight:** Built-up areas reflect SWIR strongly and NIR weakly (opposite of vegetation). NDBI quantifies urbanization and can track city growth over time.
+
+### Notebook 10: Multi-Decade Urban Growth (Landsat)
+**30 years of change from space**
+
+- Switched from Sentinel-2 (2015+) to Landsat (1984+) for historical data
+- Analyzed Denver, Colorado across 1995, 2005, 2015, and 2024
+- Handled different Landsat missions (5/7 vs 8/9) with different band numbering
+- Created a 30-year urban growth visualization
+
+**Key insight:** Sentinel-2 only goes back to 2015. For multi-decade analysis, Landsat provides 40+ years of consistent Earth observation data — though at coarser resolution (30m vs 10m).
+
 ---
 
 ## Repository structure
@@ -75,14 +141,21 @@ space-data-lab/
 │
 ├── notebooks/
 │   ├── 01_first_multispectral_win.ipynb   # Load data, RGB, NDVI basics
-│   ├── 02_seasonal_comparison.ipynb        # Summer vs winter comparison
-│   └── 03_time_series_animation.ipynb      # Full year animation
+│   ├── 02_seasonal_comparison.ipynb       # Summer vs winter comparison
+│   ├── 03_time_series_animation.ipynb     # Full year animation
+│   ├── 04_cloud_masking.ipynb             # Handling clouds in imagery
+│   ├── 05_spectral_indices.ipynb          # NDWI, NDBI, NBR indices
+│   ├── 06_wildfire_analysis.ipynb         # Palisades Fire burn severity
+│   ├── 07_flood_analysis.ipynb            # Brazil flood detection
+│   ├── 08_drought_analysis.ipynb          # California drought comparison
+│   ├── 09_urban_expansion.ipynb           # NDBI urban growth (Sentinel-2)
+│   └── 10_multidecade_urban_growth.ipynb  # 30-year Landsat analysis
 │
 ├── outputs/
-│   └── seasonal_animation.gif              # Exported animation
+│   └── seasonal_animation.gif             # Exported animation
 │
 └── src/
-    └── stac_utils.py                       # (Future) reusable helpers
+    └── stac_utils.py                      # (Future) reusable helpers
 ```
 
 ---
@@ -112,14 +185,29 @@ Satellites don't see "colors" — they measure light intensity in specific wavel
 | Red (B04) | 665 nm | Chlorophyll absorption |
 | NIR (B08) | 842 nm | Vegetation structure |
 
-### NDVI (Normalized Difference Vegetation Index)
-```
-NDVI = (NIR - Red) / (NIR + Red)
-```
+### Spectral Indices
+All follow the same pattern: `(Band_A - Band_B) / (Band_A + Band_B)`
+
+| Index | Formula | What it detects |
+|-------|---------|-----------------|
+| **NDVI** | (NIR - Red) / (NIR + Red) | Vegetation health |
+| **NDWI** | (Green - NIR) / (Green + NIR) | Water bodies |
+| **NDBI** | (SWIR - NIR) / (SWIR + NIR) | Built-up/urban areas |
+| **NBR** | (NIR - SWIR2) / (NIR + SWIR2) | Burn severity |
+
+### NDVI Interpretation
 - **0.6 to 1.0** — Dense, healthy vegetation
 - **0.2 to 0.6** — Sparse or stressed vegetation
 - **0.0 to 0.2** — Bare soil, rocks
 - **-1.0 to 0.0** — Water, snow, clouds
+
+### Satellite Missions Used
+
+| Mission | Available | Resolution | Best for |
+|---------|-----------|------------|----------|
+| Sentinel-2 | 2015–present | 10m | Recent, detailed analysis |
+| Landsat 8/9 | 2013–present | 30m | Recent historical |
+| Landsat 5/7 | 1984–2013 | 30m | Multi-decade studies |
 
 ### Bounding Box Format
 ```python
@@ -129,13 +217,22 @@ Note: Google Maps gives lat/lon, but bbox needs lon/lat order!
 
 ---
 
+## What's been covered
+
+- [x] Explore other spectral indices (NDWI for water, NDBI for urban areas)
+- [x] Apply cloud masking using QA bands
+- [x] Compare a drought year to a normal year
+- [x] Detect fire scars (Palisades Fire burn severity)
+- [x] Detect flood impacts (Brazil 2024)
+- [x] Multi-decade analysis using Landsat
+
 ## Next possible directions
 
-- [ ] Explore other spectral indices (NDWI for water, NDBI for urban areas)
-- [ ] Apply cloud masking using QA bands
-- [ ] Compare a drought year to a normal year
-- [ ] Detect fire scars or flood impacts
-- [ ] Apply the same workflow to Mars orbital data
+- [ ] Apply the same workflow to Mars orbital data (HiRISE, CRISM)
+- [ ] Explore radar data (SAR) for cloud-penetrating analysis
+- [ ] Time series anomaly detection for early warning systems
+- [ ] Machine learning classification of land cover types
+- [ ] Combine multiple indices for composite analysis
 
 ---
 
